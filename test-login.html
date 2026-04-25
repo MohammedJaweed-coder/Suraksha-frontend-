@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suraksha.ai - Login Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+        
+        .result pre {
+            margin-top: 10px;
+            background: rgba(0,0,0,0.05);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #004085;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        
+        .test-accounts {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .test-accounts h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .test-accounts ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .test-accounts li {
+            padding: 6px 0;
+            color: #666;
+        }
+        
+        .test-accounts code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Suraksha.ai Login Test</h1>
+        <p class="subtitle">Test the backend login endpoint</p>
+        
+        <div class="info">
+            <strong>ℹ️ Info:</strong> The backend automatically detects if you're logging in as citizen or admin based on your email. No need to select a role!
+        </div>
+        
+        <div class="test-accounts">
+            <h3>🔐 Quick Test Accounts</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button type="button" onclick="fillCitizen()" style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    👤 Citizen
+                </button>
+                <button type="button" onclick="fillAdmin()" style="flex: 1; padding: 8px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🛡️ Admin
+                </button>
+            </div>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="citizen@suraksha.ai"
+                    value="citizen@suraksha.ai"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter any password"
+                    value="12345678"
+                    required
+                >
+            </div>
+            
+            <button type="submit" id="loginBtn">Sign In</button>
+        </form>
+        
+        <div id="result" class="result"></div>
+        
+        <div class="test-accounts">
+            <h3>📋 Test Accounts (password: 123456)</h3>
+            <ul>
+                <li><code>rajesh.kumar@example.com</code></li>
+                <li><code>rahul.sharma@example.com</code></li>
+                <li><code>priya.patel@example.com</code></li>
+                <li><code>admin@suraksha.ai</code> (admin)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('loginForm');
+        const resultDiv = document.getElementById('result');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        // Quick fill functions
+        function fillCitizen() {
+            document.getElementById('email').value = 'citizen@suraksha.ai';
+            document.getElementById('password').value = '12345678';
+        }
+        
+        function fillAdmin() {
+            document.getElementById('email').value = 'admin@suraksha.ai';
+            document.getElementById('password').value = '123456';
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Disable button
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in...';
+            
+            // Hide previous result
+            resultDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://localhost:3002/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const roleEmoji = data.user.role === 'admin' ? '🛡️' : '👤';
+                    const roleColor = data.user.role === 'admin' ? '#f59e0b' : '#667eea';
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Login Successful!</strong>
+                        <p style="color: ${roleColor}; font-weight: bold; margin: 10px 0;">
+                            ${roleEmoji} Role: ${data.user.role.toUpperCase()}
+                        </p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <strong>❌ Login Failed</strong>
+                        <p>${data.error || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ Network Error</strong>
+                    <p>${error.message}</p>
+                    <p><small>Make sure the backend is running on http://localhost:3002</small></p>
+                `;
+            } finally {
+                // Re-enable button
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+            }
+        });
+    </script>
+</body>
+</html>
