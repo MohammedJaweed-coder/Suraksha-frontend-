@@ -1,0 +1,1221 @@
+openapi: 3.0.3
+info:
+  title: Kaval PWA Backend API
+  description: |
+    Comprehensive civic tech platform backend service for Bengaluru Sentinel (Track A Police/Safety application).
+   
+    This API provides offline-first synchronization, geospatial queries, secure media handling,
+    and chain of custody for evidence integrity in civic safety reporting.
+   
+    **Key Features:**
+    - WebAuthn biometric authentication
+    - Critical priority SOS incident processing
+    - Geospatial heatmap queries with PostGIS
+    - Secure media upload with SHA-256 chain of custody
+    - Bulk offline synchronization with idempotency
+  version: 1.0.0
+  contact:
+    name: Kaval PWA Backend
+    email: support@kaval.app
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+
+servers:
+  - url: /api/v1
+    description: Development server
+  - url: https://api.kaval.app/api/v1
+    description: Production server
+
+
+security:
+  - BearerAuth: []
+
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from WebAuthn authentication
+
+
+  schemas:
+    # Authentication Schemas
+    WebAuthnRegistrationOptions:
+      type: object
+      properties:
+        challenge:
+          type: string
+          description: Base64URL-encoded challenge
+        rp:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "Kaval PWA"
+            id:
+              type: string
+              example: "kaval.app"
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Base64URL-encoded user ID
+            name:
+              type: string
+              example: "user@example.com"
+            displayName:
+              type: string
+              example: "User Name"
+        pubKeyCredParams:
+          type: array
+          items:
+            type: object
+            properties:
+              alg:
+                type: integer
+                example: -7
+              type:
+                type: string
+                example: "public-key"
+        timeout:
+          type: integer
+          example: 60000
+        attestation:
+          type: string
+          example: "none"
+        authenticatorSelection:
+          type: object
+          properties:
+            authenticatorAttachment:
+              type: string
+              example: "platform"
+            userVerification:
+              type: string
+              example: "required"
+
+
+    WebAuthnRegistrationRequest:
+      type: object
+      required:
+        - deviceId
+        - credential
+      properties:
+        deviceId:
+          type: string
+          description: Unique device identifier
+          example: "device_12345"
+        credential:
+          type: object
+          description: WebAuthn credential response from client
+          properties:
+            id:
+              type: string
+            rawId:
+              type: string
+            response:
+              type: object
+              properties:
+                attestationObject:
+                  type: string
+                clientDataJSON:
+                  type: string
+            type:
+              type: string
+              example: "public-key"
+
+
+    WebAuthnAuthenticationOptions:
+      type: object
+      properties:
+        challenge:
+          type: string
+          description: Base64URL-encoded challenge
+        timeout:
+          type: integer
+          example: 60000
+        rpId:
+          type: string
+          example: "kaval.app"
+        allowCredentials:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+                example: "public-key"
+        userVerification:
+          type: string
+          example: "required"
+
+
+    WebAuthnAuthenticationRequest:
+      type: object
+      required:
+        - deviceId
+        - credential
+      properties:
+        deviceId:
+          type: string
+          description: Unique device identifier
+          example: "device_12345"
+        credential:
+          type: object
+          description: WebAuthn assertion response from client
+          properties:
+            id:
+              type: string
+            rawId:
+              type: string
+            response:
+              type: object
+              properties:
+                authenticatorData:
+                  type: string
+                clientDataJSON:
+                  type: string
+                signature:
+                  type: string
+                userHandle:
+                  type: string
+            type:
+              type: string
+              example: "public-key"
+
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          description: JWT token for authenticated requests
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        userId:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+
+
+    # Incident Schemas
+    IncidentType:
+      type: string
+      enum:
+        - SOS
+        - TRAFFIC_VIOLATION
+        - DARK_SPOT
+        - PUBLIC_NUISANCE
+        - THEFT
+        - OTHER
+      description: Type of incident being reported
+
+
+    ViolationType:
+      type: string
+      enum:
+        - TRAFFIC
+        - PUBLIC_NUISANCE
+        - DARK_SPOT
+        - THEFT
+        - OTHER
+      description: Specific violation type for non-SOS incidents
+
+
+    IncidentStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - RESOLVED
+      description: Current status of the incident
+
+
+    SOSRequest:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - batteryLevel
+        - deviceId
+      properties:
+        audioClip:
+          type: string
+          format: binary
+          description: Audio recording of the emergency (max 10MB)
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+          example: 12.9716
+          description: GPS latitude coordinate
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+          example: 77.5946
+          description: GPS longitude coordinate
+        batteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 45
+          description: Device battery level percentage
+        deviceId:
+          type: string
+          example: "device_12345"
+          description: Unique device identifier
+
+
+    ViolationRequest:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - violationType
+        - timestamp
+      properties:
+        mediaFile:
+          type: string
+          format: binary
+          description: Image or video evidence (max 50MB)
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+          example: 12.9352
+          description: GPS latitude coordinate
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+          example: 77.6245
+          description: GPS longitude coordinate
+        violationType:
+          $ref: '#/components/schemas/ViolationType'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:00.000Z"
+          description: ISO 8601 timestamp when incident occurred
+        description:
+          type: string
+          maxLength: 1000
+          example: "Traffic signal violation at busy intersection"
+          description: Optional detailed description of the violation
+
+
+    IncidentResponse:
+      type: object
+      properties:
+        incidentId:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:00.000Z"
+        mediaUrl:
+          type: string
+          format: uri
+          example: "https://r2.kaval.app/media/incident_123.jpg"
+          description: URL to uploaded media file (for violation reports)
+        fileHash:
+          type: string
+          example: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+          description: SHA-256 hash for chain of custody (for violation reports)
+
+
+    IncidentDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        type:
+          $ref: '#/components/schemas/IncidentType'
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: float
+              example: 12.9716
+            longitude:
+              type: number
+              format: float
+              example: 77.5946
+        description:
+          type: string
+          example: "Traffic violation reported with photo evidence"
+        batteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 45
+          description: Device battery level (SOS incidents only)
+        reportedAt:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:00.000Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:15.000Z"
+        userId:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: Reporter user ID (null for anonymous reports)
+        media:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              s3Url:
+                type: string
+                format: uri
+              fileHash:
+                type: string
+                description: SHA-256 hash for chain of custody
+              mediaType:
+                type: string
+                enum: [IMAGE, VIDEO, AUDIO]
+              createdAt:
+                type: string
+                format: date-time
+
+
+    # Map and Geospatial Schemas
+    HeatmapType:
+      type: string
+      enum:
+        - all
+        - DARK_SPOT
+        - TRAFFIC
+        - SOS
+      description: Filter incidents by type for heatmap
+
+
+    GeoJSONFeatureCollection:
+      type: object
+      required:
+        - type
+        - features
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONFeature'
+
+
+    GeoJSONFeature:
+      type: object
+      required:
+        - type
+        - geometry
+        - properties
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          $ref: '#/components/schemas/GeoJSONPoint'
+        properties:
+          type: object
+          properties:
+            incidentId:
+              type: string
+              format: uuid
+            type:
+              $ref: '#/components/schemas/IncidentType'
+            status:
+              $ref: '#/components/schemas/IncidentStatus'
+            reportedAt:
+              type: string
+              format: date-time
+            description:
+              type: string
+
+
+    GeoJSONPoint:
+      type: object
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+          example: [77.5946, 12.9716]
+          description: "[longitude, latitude] in WGS84"
+
+
+    # Sync Schemas
+    OfflineIncidentPayload:
+      type: object
+      required:
+        - id
+        - type
+        - payload
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-generated UUID for idempotency
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        type:
+          type: string
+          enum: [sos, violation]
+          description: Type of incident payload
+        payload:
+          oneOf:
+            - $ref: '#/components/schemas/SOSRequest'
+            - $ref: '#/components/schemas/ViolationRequest'
+          description: The actual incident data (matches SOS or violation request format)
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:00.000Z"
+          description: Client-side timestamp when payload was created
+
+
+    SyncRequest:
+      type: object
+      required:
+        - payloads
+      properties:
+        payloads:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfflineIncidentPayload'
+          maxItems: 100
+          description: Array of offline incident payloads to process
+
+
+    SyncResponse:
+      type: object
+      properties:
+        processed:
+          type: integer
+          example: 8
+          description: Number of payloads successfully processed
+        failed:
+          type: integer
+          example: 2
+          description: Number of payloads that failed processing
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              payloadId:
+                type: string
+                format: uuid
+              error:
+                type: string
+                example: "Invalid coordinates provided"
+              code:
+                type: string
+                example: "VALIDATION_ERROR"
+
+
+    # Error Schemas
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "Invalid latitude coordinate provided"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-04-24T10:30:00.000Z"
+
+
+paths:
+  /api/v1/routes/search:
+    get:
+      summary: Search for locations
+      description: Returns a list of location suggestions based on the query string.
+      tags:
+        - Routes
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search term (e.g. MG Road)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved location suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    lat:
+                      type: number
+                    lng:
+                      type: number
+              examples:
+                default:
+                  value:
+                    - name: "MG Road"
+                      lat: 12.9750
+                      lng: 77.6050
+                    - name: "Indiranagar"
+                      lat: 12.9719
+                      lng: 77.6412
+                    - name: "Koramangala"
+                      lat: 12.9352
+                      lng: 77.6245
+                    - name: "Whitefield"
+                      lat: 12.9698
+                      lng: 77.7500
+                    - name: "Jayanagar"
+                      lat: 12.9308
+                      lng: 77.5838
+                    - name: "Majestic"
+                      lat: 12.9767
+                      lng: 77.5713
+                    - name: "HSR Layout"
+                      lat: 12.9141
+                      lng: 77.6411
+                    - name: "Electronic City"
+                      lat: 12.8452
+                      lng: 77.6632
+                    - name: "Hebbal"
+                      lat: 13.0354
+                      lng: 77.5988
+                    - name: "Frazer Town"
+                      lat: 12.9968
+                      lng: 77.6130
+  /api/v1/report:
+    post:
+      summary: Submit a report for email notification
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                location:
+                  type: string
+                description:
+                  type: string
+                mediaUrl:
+                  type: string
+      responses:
+        '200':
+          description: Report submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /api/v1/report/{id}/resolve:
+    patch:
+      summary: Mark a report as resolved
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report marked as resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                   message:
+                     type: string
+  /api/v1/admin/inbox:
+    get:
+      summary: Fetch report messages for admin inbox
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Successfully retrieved report messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    location:
+                      type: string
+                    description:
+                      type: string
+                    createdAt:
+                      type: string
+                    isNew:
+                      type: boolean
+              examples:
+                default:
+                  value:
+                    - id: "msg-1"
+                      name: "Amit Kumar"
+                      email: "amit.kumar@example.com"
+                      location: "Silk Board Junction"
+                      description: "Heavy water logging near the service road."
+                      createdAt: "2026-04-25T11:30:00Z"
+                      isNew: true
+                    - id: "msg-2"
+                      name: "Priya Patel"
+                      email: "priya.patel@example.com"
+                      location: "Indiranagar 100ft Rd"
+                      description: "Street lights are not working for the last 3 days."
+                      createdAt: "2026-04-25T10:15:00Z"
+                      isNew: false
+  # Authentication Endpoints
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Mock Login for development
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      role:
+                        type: string
+              examples:
+                admin:
+                  value:
+                    token: "mock-jwt-kaval-2026"
+                    user:
+                      email: "admin@suraksha.ai"
+                      role: "admin"
+                user:
+                  value:
+                    token: "mock-jwt-kaval-2026"
+                    user:
+                      email: "user@example.com"
+                      role: "user"
+  /auth/generate-registration-options:
+    post:
+      tags:
+        - Authentication
+      summary: Generate WebAuthn registration options
+      description: |
+        Returns WebAuthn registration options for the client device to create new biometric credentials.
+        This is the first step in the WebAuthn registration flow.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+              properties:
+                deviceId:
+                  type: string
+                  example: "device_12345"
+                  description: Unique device identifier
+      responses:
+        '200':
+          description: WebAuthn registration options generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebAuthnRegistrationOptions'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /auth/verify-registration:
+    post:
+      tags:
+        - Authentication
+      summary: Verify WebAuthn registration
+      description: |
+        Accepts the WebAuthn credential from the device and registers the user.
+        Returns a JWT token on successful registration.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnRegistrationRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid credential or registration failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /auth/generate-authentication-options:
+    post:
+      tags:
+        - Authentication
+      summary: Generate WebAuthn authentication options
+      description: |
+        Returns WebAuthn challenge for login. This is the first step in the WebAuthn authentication flow.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+              properties:
+                deviceId:
+                  type: string
+                  example: "device_12345"
+                  description: Unique device identifier
+      responses:
+        '200':
+          description: WebAuthn authentication options generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebAuthnAuthenticationOptions'
+        '400':
+          description: Invalid request parameters or device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /auth/verify-authentication:
+    post:
+      tags:
+        - Authentication
+      summary: Verify WebAuthn authentication
+      description: |
+        Verifies the device's biometric assertion and returns a JWT token on successful authentication.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnAuthenticationRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Invalid credential format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  # Incident Endpoints
+  /api/v1/incidents/sos:
+    post:
+      tags:
+        - Incidents
+      summary: Report SOS emergency incident
+      description: |
+        **CRITICAL PRIORITY**: SOS requests are processed with highest priority before all other queues.
+       
+        Accepts multipart/form-data with audio clip and location data for emergency reporting.
+        Must be processed within 5 seconds as per system requirements.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SOSRequest'
+            encoding:
+              audioClip:
+                contentType: audio/wav, audio/mp3, audio/m4a
+      responses:
+        '200':
+          description: SOS incident reported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '400':
+          description: Invalid request data or file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large (max 10MB for audio)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /api/v1/incidents/violation:
+    post:
+      tags:
+        - Incidents
+      summary: Report safety violation incident
+      description: |
+        Reports non-emergency safety violations with supporting media evidence.
+       
+        Accepts multipart/form-data with image/video files and incident details.
+        Files are streamed to S3/R2 storage and SHA-256 hashed for chain of custody.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ViolationRequest'
+            encoding:
+              mediaFile:
+                contentType: image/jpeg, image/png, video/mp4, video/mov
+      responses:
+        '200':
+          description: Violation incident reported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '400':
+          description: Invalid request data or file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large (max 50MB for media)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /incidents/{id}:
+    get:
+      tags:
+        - Incidents
+      summary: Get incident details by ID
+      description: |
+        Returns full details of a specific incident by its UUID, including media files and chain of custody information.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Incident UUID
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Incident details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentDetails'
+        '404':
+          description: Incident not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  # Map and Geospatial Endpoints
+  /api/v1/map/heatmap:
+    get:
+      tags:
+        - Map
+      summary: Get incident heatmap data
+      description: |
+        Returns incident data as a valid GeoJSON FeatureCollection for heatmap visualization.
+       
+        Uses PostGIS ST_DWithin() for efficient radius-based queries.
+        Compatible with react-leaflet and other mapping libraries.
+       
+        **Performance**: Queries complete within 2 seconds for up to 50km radius.
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            minimum: -90
+            maximum: 90
+          description: Center latitude coordinate
+          example: 12.9716
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            minimum: -180
+            maximum: 180
+          description: Center longitude coordinate
+          example: 77.5946
+        - name: radiusKm
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 5
+          description: Search radius in kilometers
+          example: 5
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/HeatmapType'
+          description: Filter incidents by type
+          example: "all"
+      responses:
+        '200':
+          description: Heatmap data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoJSONFeatureCollection'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  # Sync Endpoints
+  /sync:
+    post:
+      tags:
+        - Sync
+      summary: Bulk process offline incident payloads
+      description: |
+        **Offline-First Synchronization**: Processes an array of offline-buffered payloads in bulk.
+       
+        Uses client-generated UUIDs as idempotency keys to prevent duplicate processing.
+        Supports both SOS and violation incident types in the same batch.
+       
+        **Priority Processing**: SOS requests are processed before violation reports.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: Sync operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '400':
+          description: Invalid payload format or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Too many payloads (max 100 per request)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+tags:
+  - name: Authentication
+    description: WebAuthn biometric authentication endpoints
+  - name: Incidents
+    description: SOS and violation incident reporting
+  - name: Map
+    description: Geospatial heatmap and mapping services
+  - name: Sync
+    description: Offline-first bulk synchronization
+

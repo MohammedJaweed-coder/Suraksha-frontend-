@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="Kaval shield icon">
+  <rect width="192" height="192" rx="38" fill="#0A1F44" />
+  <path d="M96 28 146 46v43c0 33-20 62-50 76-30-14-50-43-50-76V46l50-18Z" fill="#F3F4F6" />
+  <path d="M96 50 128 62v27c0 21-12 40-32 51-20-11-32-30-32-51V62l32-12Z" fill="#DC2626" />
+  <path d="M89 72h14v18h18v14h-18v18H89v-18H71V90h18V72Z" fill="#F3F4F6" />
+</svg>

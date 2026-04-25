@@ -1,0 +1,117 @@
+{
+  "common": {
+    "app_name": "Suraksha.ai",
+    "powered_by": "Powered by Police",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "saved": "Saved",
+    "submit": "Submit",
+    "unknown": "Unknown",
+    "back": "Back",
+    "view_details": "View Details ->",
+    "location_denied": "Location access denied. Please enable GPS.",
+    "camera_denied": "Camera access denied. Please allow camera permission.",
+    "mic_denied": "Microphone access denied. Please allow microphone permission."
+  },
+  "nav": {
+    "home": "Home",
+    "sos": "SOS",
+    "report": "Report",
+    "map": "Heatmap",
+    "routes": "Routes",
+    "cctv": "CCTV",
+    "history": "Reports"
+  },
+  "login": {
+    "title": "Suraksha.ai",
+    "subtitle": "Citizen Safety Platform",
+    "cta": "Login with Biometrics",
+    "register": "Register Device",
+    "success": "Secure login complete.",
+    "registering": "Registering this device...",
+    "failed": "Biometric login failed. Try again."
+  },
+  "sos": {
+    "title": "Emergency SOS",
+    "subtitle": "Tap to alert Bengaluru Police Control Room",
+    "countdown": "Sending in {{seconds}}s...",
+    "cancel": "Cancel",
+    "sent": "Alert Sent. Help is on the way.",
+    "tracking": "Tracking ID: {{id}}",
+    "sending": "Contacting control room...",
+    "battery": "Battery",
+    "recording": "Recording emergency audio for 10 seconds"
+  },
+  "violation": {
+    "title": "Report Incident",
+    "subtitle": "Capture evidence and tag the exact location.",
+    "type_label": "Incident Type",
+    "description": "Description",
+    "description_placeholder": "Add details...",
+    "capture": "Capture Photo/Video",
+    "retake": "Retake",
+    "use_photo": "Use Photo",
+    "submit": "Submit Report",
+    "success": "Report submitted. Tracking ID: {{id}}",
+    "location_tagged": "Location tagged",
+    "address_loading": "Fetching current address...",
+    "camera_live": "Live Camera",
+    "camera_unavailable": "Camera preview unavailable.",
+    "validation_type": "Select an incident type.",
+    "validation_photo": "Capture a photo before submitting.",
+    "types": {
+      "TRAFFIC": "Traffic Violation",
+      "PUBLIC_NUISANCE": "Public Nuisance",
+      "DARK_SPOT": "Dark/Unsafe Area",
+      "THEFT": "Theft",
+      "OTHER": "Other"
+    }
+  },
+  "map": {
+    "title": "City Heatmap",
+    "all": "All",
+    "sos": "SOS",
+    "traffic": "Traffic",
+    "dark_spots": "Dark Spots",
+    "nuisance": "Nuisance",
+    "within": "Within {{radius}} km",
+    "my_location": "My Location",
+    "reported": "Reported {{time}}",
+    "no_data": "No incidents found for this area."
+  },
+  "history": {
+    "title": "My Reports",
+    "total": "Total Reports",
+    "resolved": "Resolved",
+    "pending": "Pending",
+    "all": "All",
+    "violations": "Violations",
+    "dark_spots": "Dark Spots",
+    "empty": "No reports yet. Stay safe and report what you see.",
+    "timeline": "Status Timeline",
+    "hash": "SHA-256 File Hash",
+    "coords": "Coordinates"
+  },
+  "status": {
+    "PENDING": "Pending",
+    "IN_PROGRESS": "In Progress",
+    "RESOLVED": "Resolved",
+    "CRITICAL": "Critical"
+  },
+  "offline": {
+    "banner": "You are offline. Reports will sync automatically.",
+    "saved": "Saved offline. Will sync when connected.",
+    "back_online": "Back online - Syncing your reports...",
+    "sync_success": "Offline reports synced successfully.",
+    "sync_failed": "Sync failed. Will retry automatically."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network unavailable. Your report has been saved offline.",
+    "webauthn": "Biometric login failed. Try again.",
+    "media": "Could not capture media from this device.",
+    "heatmap": "Unable to load the safety heatmap right now."
+  }
+}
